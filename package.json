@@ -1,0 +1,14 @@
+{
+  "name": "ceska-politicka-simulace-v6",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "latest",
+    "express": "latest",
+    "openai": "latest"
+  }
+}

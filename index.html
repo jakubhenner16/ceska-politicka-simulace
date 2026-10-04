@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Česká politická simulace V6</title>
+  <style>
+    :root{--bg:#0e1117;--panel:#171c25;--panel2:#1d2430;--text:#eef2f7;--muted:#9aa6b5;--line:#2a3340;--accent:#d6b35a}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input,textarea,select{font:inherit} button{cursor:pointer}
+    .top{height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 18px;background:#11151d;position:sticky;top:0;z-index:10}
+    .brand{font-weight:800;letter-spacing:.4px}.badge{padding:5px 8px;border:1px solid var(--line);border-radius:8px;color:var(--muted)}
+    .stats{display:flex;gap:8px;flex:1;justify-content:center;flex-wrap:wrap}.stat{background:var(--panel);border:1px solid var(--line);padding:7px 10px;border-radius:9px}
+    .layout{display:grid;grid-template-columns:310px minmax(420px,1fr) 320px;min-height:calc(100vh - 64px)}
+    .left,.right{background:#121720;padding:14px;overflow:auto}.left{border-right:1px solid var(--line)}.right{border-left:1px solid var(--line)}
+    .center{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px}.title{font-weight:800;margin-bottom:10px}
+    .muted{color:var(--muted)} .row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.controls button,.primary{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;padding:9px}
+    .primary{background:#293241;border-color:#445166}.danger{background:#3a2024!important}
+    #map{width:100%;min-height:480px;background:#0b0e13;border:1px solid var(--line);border-radius:14px;padding:8px}
+    svg{width:100%;height:auto;display:block}.region{stroke:#111820;stroke-width:1.2;cursor:pointer;transition:filter .15s,opacity .15s}.region:hover{filter:brightness(1.25);stroke:#fff;stroke-width:2}
+    .region.selected{stroke:#fff;stroke-width:3}.maplabel{font-size:8px;fill:#e9edf3;pointer-events:none;text-anchor:middle}
+    .feed{display:flex;flex-direction:column;gap:8px;max-height:270px;overflow:auto}.event{padding:10px;border:1px solid var(--line);border-radius:10px;background:#141a23}.event b{display:block;margin-bottom:4px}
+    .action textarea{width:100%;min-height:95px;resize:vertical;background:#0d1118;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px}
+    .action .row{margin-top:8px}.action button{flex:1}
+    .party{padding:9px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer}.party.active{outline:2px solid var(--accent)}
+    .dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:6px}.bar{height:8px;background:#28313d;border-radius:8px;overflow:hidden}.bar>i{display:block;height:100%}
+    .small{font-size:12px}.status{min-height:20px;color:var(--muted)} .apiok{color:#79d79b}.apino{color:#e9a5a5}
+    @media(max-width:1050px){.layout{grid-template-columns:250px 1fr}.right{display:none}}
+    @media(max-width:720px){.layout{display:block}.left{border:0}.center{padding:10px}.top{height:auto;min-height:64px;flex-wrap:wrap}.stats{justify-content:flex-start}#map{min-height:0}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">ČESKÁ POLITICKÁ SIMULACE <span class="badge">V6</span></div>
+  <div class="stats">
+    <div class="stat">📅 <b id="date">–</b></div>
+    <div class="stat">📊 <b id="support">–</b></div>
+    <div class="stat">👥 <b id="members">–</b></div>
+    <div class="stat">💰 <b id="budget">–</b></div>
+    <div class="stat">🏛️ <b id="influence">–</b></div>
+  </div>
+  <button id="newGame">Nová hra</button>
+</header>
+
+<main class="layout">
+  <aside class="left">
+    <div class="card">
+      <div class="title">Politická mapa</div>
+      <label class="small muted">Zobrazit stranu</label>
+      <select id="partySelect" style="width:100%;margin:5px 0 10px;padding:8px;background:#0d1118;color:var(--text);border:1px solid var(--line);border-radius:8px"></select>
+      <label class="small muted">Režim mapy</label>
+      <select id="mapMode" style="width:100%;margin:5px 0 10px;padding:8px;background:#0d1118;color:var(--text);border:1px solid var(--line);border-radius:8px">
+        <option value="support">Podpora strany</option>
+        <option value="change">Změna podpory</option>
+      </select>
+      <div id="selectedRegion" class="muted small">Klikni na kraj.</div>
+    </div>
+    <div class="card">
+      <div class="title">Strany</div>
+      <div id="parties"></div>
+    </div>
+    <div class="card">
+      <div class="title">Rychlé akce</div>
+      <div class="controls">
+        <button data-action="Chci udělat průzkum podpory.">Průzkum</button>
+        <button data-action="Chci uspořádat celostátní kampaň.">Kampaň</button>
+        <button data-action="Chci oslovit starosty.">Starostové</button>
+        <button data-action="Chci začít vyjednávat o koalici.">Koalice</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="center">
+    <div class="card">
+      <div class="title">Mapa České republiky</div>
+      <div id="map"></div>
+    </div>
+    <div class="card">
+      <div class="title">Politický feed · AI poradce</div>
+      <div id="feed" class="feed"></div>
+    </div>
+    <div class="card action">
+      <div class="title">Co chcete udělat?</div>
+      <textarea id="action" placeholder="Např. Chci uspořádat velkou kampaň v Moravskoslezském kraji."></textarea>
+      <div class="row">
+        <button id="send" class="primary">ODESLAT AKCI AI</button>
+        <button id="next">Další tah</button>
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <div class="card">
+      <div class="title">Parlament</div>
+      <div class="row between"><span>Sněmovna</span><b id="chamber">0 / 200</b></div>
+      <div class="bar" style="margin:6px 0 12px"><i id="chamberBar"></i></div>
+      <div class="row between"><span>Senát</span><b id="senate">0 / 81</b></div>
+      <div class="bar"><i id="senateBar"></i></div>
+    </div>
+    <div class="card">
+      <div class="title">Ekonomika</div>
+      <div id="economy" class="small"></div>
+    </div>
+    <div class="card">
+      <div class="title">Vybraný kraj</div>
+      <div id="regionInfo" class="small muted">Žádný kraj není vybrán.</div>
+    </div>
+    <div class="card">
+      <div class="title">LLM API</div>
+      <div id="apiStatus" class="small">Kontroluji...</div>
+      <p class="small muted">Pokud backend neběží, hra používá bezpečný lokální fallback. API klíč nikdy nevkládej do tohoto HTML.</p>
+    </div>
+  </aside>
+</main>
+
+<script>
+const REGIONS = [
+  ["Praha",50.08,14.43],["Středočeský kraj",49.82,14.82],["Jihočeský kraj",49.10,14.35],
+  ["Plzeňský kraj",49.70,13.35],["Karlovarský kraj",50.15,12.75],["Ústecký kraj",50.60,13.80],
+  ["Liberecký kraj",50.75,15.05],["Královéhradecký kraj",50.38,15.85],["Pardubický kraj",49.95,15.85],
+  ["Kraj Vysočina",49.45,15.55],["Jihomoravský kraj",49.10,16.65],["Olomoucký kraj",49.70,17.25],
+  ["Zlínský kraj",49.22,17.65],["Moravskoslezský kraj",49.82,18.10]
+];
+
+// Intentionally simplified inline polygons so the V6 is self-contained.
+// V5's real-reference SVG polygons can be dropped into this same structure later.
+const POLYS = {
+  "Karlovarský kraj":"35,110 95,80 135,115 125,175 85,190 45,160",
+  "Ústecký kraj":"95,80 175,65 220,105 205,165 150,175 125,175 135,115",
+  "Liberecký kraj":"175,65 245,55 280,100 255,140 205,165 220,105",
+  "Královéhradecký kraj":"280,100 345,105 365,145 330,180 255,140",
+  "Pardubický kraj":"255,140 330,180 355,235 300,260 250,215",
+  "Středočeský kraj":"135,175 205,165 255,140 250,215 200,255 125,245 100,205",
+  "Praha":"165,185 190,180 198,205 175,215 155,200",
+  "Plzeňský kraj":"45,160 85,190 125,245 95,300 35,275 20,215",
+  "Jihočeský kraj":"35,275 95,300 145,295 190,340 150,390 65,370 25,325",
+  "Kraj Vysočina":"200,255 250,215 300,260 275,330 190,340 145,295",
+  "Jihomoravský kraj":"275,330 355,300 410,345 390,410 310,420 255,380",
+  "Olomoucký kraj":"355,235 430,215 470,270 445,325 355,300 300,260",
+  "Zlínský kraj":"445,325 500,305 545,350 510,395 390,410",
+  "Moravskoslezský kraj":"430,215 500,190 560,220 545,350 500,305 470,270"
+};
+
+const state = {
+  date: new Date(),
+  playerParty: "KORUNA ČESKÁ",
+  selectedParty: "KORUNA ČESKÁ",
+  selectedRegion: null,
+  support: 7.4, members: 1840, budget: 2400000, influence: 12,
+  chamber: 0, senate: 0,
+  economy: {gdp: 100, inflation: 2.4, unemployment: 4.1, debt: 42.1},
+  parties: {
+    "KORUNA ČESKÁ": {color:"#d6b35a",support:7.4, seats:0},
+    "KDU-ČSL": {color:"#f0cf4a",support:6.8,seats:14},
+    "ODS": {color:"#4d8bd8",support:17.1,seats:34},
+    "ANO": {color:"#7b8798",support:29.2,seats:72},
+    "STAN": {color:"#c94b5b",support:12.6,seats:33}
+  },
+  regional: {}
+};
+
+for(const [name] of REGIONS){
+  state.regional[name] = {
+    "KORUNA ČESKÁ": +(3 + Math.random()*13).toFixed(1),
+    "KDU-ČSL": +(4 + Math.random()*8).toFixed(1),
+    "ODS": +(8 + Math.random()*14).toFixed(1),
+    "ANO": +(18 + Math.random()*18).toFixed(1),
+    "STAN": +(5 + Math.random()*12).toFixed(1)
+  };
+}
+
+const $ = id => document.getElementById(id);
+const fmt = n => new Intl.NumberFormat("cs-CZ").format(Math.round(n));
+const pct = n => `${Number(n).toFixed(1)} %`;
+
+function hexToRgb(h){return h.match(/\w\w/g).map(x=>parseInt(x,16));}
+function rgba(hex,a){const [r,g,b]=hexToRgb(hex);return `rgba(${r},${g},${b},${a})`;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function renderParties(){
+  $("parties").innerHTML = Object.entries(state.parties).map(([name,p]) =>
+    `<div class="party ${name===state.selectedParty?"active":""}" data-party="${esc(name)}"><span class="dot" style="background:${p.color}"></span><b>${esc(name)}</b><span class="muted"> · ${pct(p.support)}</span></div>`
+  ).join("");
+  document.querySelectorAll(".party").forEach(el=>el.onclick=()=>{state.selectedParty=el.dataset.party;$("partySelect").value=state.selectedParty;render();});
+}
+function renderSelect(){
+  $("partySelect").innerHTML=Object.keys(state.parties).map(n=>`<option>${esc(n)}</option>`).join("");
+  $("partySelect").value=state.selectedParty;
+}
+function mapOpacity(v,mode){
+  if(mode==="change") return Math.min(.9, .15 + Math.min(12,Math.abs(v))/12*.75);
+  return Math.min(.95, .12 + Math.max(0,Math.min(55,v))/55*.83);
+}
+function renderMap(){
+  const party=state.selectedParty, color=state.parties[party].color, mode=$("mapMode").value;
+  const shapes=REGIONS.map(([name])=>{
+    const v=state.regional[name][party] ?? 0;
+    const points=POLYS[name];
+    return `<polygon class="region ${state.selectedRegion===name?"selected":""}" data-region="${esc(name)}" points="${points}" fill="${rgba(color,mapOpacity(v,mode))}"></polygon>`;
+  }).join("");
+  const labels=REGIONS.map(([name,x,y])=>{
+    // labels are positioned from a simple projection for the standalone prototype.
+    const px=20+(x-12)*31, py=420-(y-48.8)*42;
+    return `<text class="maplabel" x="${px}" y="${py}">${esc(name.replace(" kraj","").replace("Kraj ",""))}</text>`;
+  }).join("");
+  $("map").innerHTML=`<svg viewBox="0 0 580 430" role="img" aria-label="Politická mapa České republiky">${shapes}${labels}</svg>`;
+  document.querySelectorAll(".region").forEach(el=>el.onclick=()=>selectRegion(el.dataset.region));
+}
+function selectRegion(name){
+  state.selectedRegion=name;
+  const party=state.selectedParty, v=state.regional[name][party];
+  $("selectedRegion").textContent=`${name}: ${pct(v)} pro ${party}`;
+  $("regionInfo").innerHTML=`<b>${esc(name)}</b><br>Podpora ${esc(party)}: <b>${pct(v)}</b><br><span class="muted">Klikni na jiný kraj nebo změň stranu.</span>`;
+  renderMap();
+}
+function addFeed(title,text){
+  const el=document.createElement("div"); el.className="event";
+  el.innerHTML=`<b>${esc(title)}</b><span class="small muted">${esc(text)}</span>`;
+  $("feed").prepend(el);
+}
+function render(){
+  $("date").textContent=state.date.toLocaleDateString("cs-CZ");
+  $("support").textContent=pct(state.support);
+  $("members").textContent=fmt(state.members);
+  $("budget").textContent=fmt(state.budget)+" Kč";
+  $("influence").textContent=fmt(state.influence);
+  $("chamber").textContent=`${state.chamber} / 200`;
+  $("senate").textContent=`${state.senate} / 81`;
+  $("chamberBar").style.width=(state.chamber/200*100)+"%";
+  $("senateBar").style.width=(state.senate/81*100)+"%";
+  $("economy").innerHTML=`HDP index: <b>${state.economy.gdp.toFixed(1)}</b><br>Inflace: <b>${state.economy.inflation.toFixed(1)} %</b><br>Nezaměstnanost: <b>${state.economy.unemployment.toFixed(1)} %</b><br>Dluh: <b>${state.economy.debt.toFixed(1)} % HDP</b>`;
+  renderSelect(); renderParties(); renderMap();
+}
+function localFallback(action){
+  const a=action.toLowerCase(), effects={days:1,support:0,members:0,budget:0,influence:0,regional:{}};
+  let title="Politická aktivita", text="Akce byla vyhodnocena lokálním simulačním systémem.";
+  if(a.includes("morav")||a.includes("ostrav")||a.includes("kraj")){effects.support=.25;effects.members=18;effects.budget=-45000;effects.regional["Moravskoslezský kraj"]=1.2;title="Regionální kampaň";text="Aktivita zvýšila viditelnost strany v dotčeném regionu.";}
+  else if(a.includes("kampa")||a.includes("volb")){effects.support=.35;effects.members=35;effects.budget=-90000;title="Kampaň";text="Kampaň zvýšila celostátní viditelnost, ale stála část rozpočtu.";}
+  else if(a.includes("kdu")||a.includes("koalic")){effects.influence=1;title="Koaliční jednání";text="Bylo zahájeno předběžné vyjednávání. Druhá strana zatím nezaujala konečné stanovisko.";}
+  else if(a.includes("starost")){effects.members=24;effects.influence=1;effects.budget=-25000;title="Síť starostů";text="Oslovení komunálních politiků přineslo několik nových kontaktů.";}
+  return {effects,event:{title,text},ai_response:"Lokální fallback: backend/LLM není momentálně připojen."};
+}
+function applyResult(r){
+  const e=r.effects||{};
+  state.support=Math.max(0,Math.min(100,state.support+Number(e.support||0)));
+  state.members=Math.max(0,state.members+Number(e.members||0));
+  state.budget=Math.max(0,state.budget+Number(e.budget||0));
+  state.influence=Math.max(0,state.influence+Number(e.influence||0));
+  const days=Math.max(0,Number(e.days||0)); state.date=new Date(state.date.getTime()+days*86400000);
+  if(e.regional) for(const [region,delta] of Object.entries(e.regional)){
+    if(state.regional[region]) state.regional[region][state.playerParty]=Math.max(0,Math.min(100,state.regional[region][state.playerParty]+Number(delta||0)));
+  }
+  addFeed(r.event?.title||"Nová událost",r.event?.text||r.ai_response||"Akce byla zpracována.");
+  if(r.ai_response) addFeed("AI poradce",r.ai_response);
+  render();
+}
+async function sendAction(){
+  const action=$("action").value.trim(); if(!action)return;
+  $("status").textContent="AI vyhodnocuje akci…"; $("send").disabled=true;
+  const payload={action,state:{date:state.date.toISOString(),playerParty:state.playerParty,support:state.support,members:state.members,budget:state.budget,influence:state.influence,chamber:state.chamber,senate:state.senate,economy:state.economy,parties:state.parties,regional:state.regional}};
+  try{
+    const res=await fetch("/api/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const result=await res.json(); applyResult(result); $("status").innerHTML='<span class="apiok">✓ Akce zpracována přes backend.</span>';
+  }catch(err){
+    const result=localFallback(action); applyResult(result); $("status").innerHTML='<span class="apino">⚠ Backend není dostupný — použit lokální fallback.</span>';
+  }finally{$("send").disabled=false;$("action").value="";}
+}
+async function checkApi(){
+  try{const r=await fetch("/api/health"); if(!r.ok)throw 0; const d=await r.json(); $("apiStatus").innerHTML=d.llm?'<span class="apiok">✓ Backend + LLM jsou připravené.</span>':'<span class="apino">Backend běží, ale API klíč není nastaven.</span>';}
+  catch{$("apiStatus").innerHTML='<span class="apino">Backend neběží. Spusť server.js.</span>';}
+}
+function newGame(){
+  state.date=new Date();state.support=7.4;state.members=1840;state.budget=2400000;state.influence=12;state.chamber=0;state.senate=0;state.selectedRegion=null;
+  for(const [name] of REGIONS) for(const p of Object.keys(state.parties)) state.regional[name][p]=+(3+Math.random()*18).toFixed(1);
+  $("feed").innerHTML="";addFeed("Nová hra","Herní datum bylo nastaveno na dnešní den.");render();
+}
+$("send").onclick=sendAction;$("newGame").onclick=newGame;$("partySelect").onchange=e=>{state.selectedParty=e.target.value;render();};$("mapMode").onchange=renderMap;
+$("next").onclick=()=>{state.date=new Date(state.date.getTime()+86400000*7);addFeed("Posun času","Uplynul jeden týden.");render();};
+document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>{$("action").value=b.dataset.action;sendAction();});
+render();addFeed("V6 spuštěna","Hra je připravena. Pro skutečné LLM akce spusť backend a nastav OPENAI_API_KEY.");checkApi();
+</script>
+</body>
+</html>

@@ -80,8 +80,8 @@ app.post("/api/action", async (req,res) => {
   }
 });
 
-app.get("*", (req,res) => {
-  res.sendFile(path.join(__dirname,"index.html"));
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(PORT, () => {

@@ -63,7 +63,7 @@ app.post("/api/action", async (req,res) => {
       model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
       instructions: SYSTEM,
       input: prompt,
-      text: {text: {
+      text: {
   format: {
     type: "json_schema",
     name: "political_action",
@@ -144,25 +144,7 @@ app.post("/api/action", async (req,res) => {
     }
   }
 },
-  format: {
-    type: "json_schema",
-    name: "political_action",
-    strict: true,
-    schema: {
-      type: "object",
-      properties: {
-        effects: {
-          type: "object",
-          properties: {
-            days: { type: "number" },
-            support: { type: "number" },
-            members: { type: "number" },
-            budget: { type: "number" },
-            influence: { type: "number" },
-            regional: {
-              type: "object",
-              additionalProperties: { type: "number" }
-            }
+  
           },
           required: ["days", "support", "members", "budget", "influence", "regional"],
           additionalProperties: false

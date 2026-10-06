@@ -60,95 +60,92 @@ app.post("/api/action", async (req,res) => {
 
   try {
     const response = await client.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-      instructions: SYSTEM,
-      input: prompt,
-      text: {
-  format: {
-    type: "json_schema",
-    name: "political_action",
-    strict: true,
-    schema: {
-      type: "object",
-      properties: {
-        effects: {
-          type: "object",
-          properties: {
-            days: { type: "number" },
-            support: { type: "number" },
-            members: { type: "number" },
-            budget: { type: "number" },
-            influence: { type: "number" },
-            regional: {
-              type: "object",
-              properties: {
-                "Praha": { type: "number" },
-                "Středočeský kraj": { type: "number" },
-                "Jihočeský kraj": { type: "number" },
-                "Plzeňský kraj": { type: "number" },
-                "Karlovarský kraj": { type: "number" },
-                "Ústecký kraj": { type: "number" },
-                "Liberecký kraj": { type: "number" },
-                "Královéhradecký kraj": { type: "number" },
-                "Pardubický kraj": { type: "number" },
-                "Kraj Vysočina": { type: "number" },
-                "Jihomoravský kraj": { type: "number" },
-                "Olomoucký kraj": { type: "number" },
-                "Zlínský kraj": { type: "number" },
-                "Moravskoslezský kraj": { type: "number" }
-              },
-              required: [
-                "Praha",
-                "Středočeský kraj",
-                "Jihočeský kraj",
-                "Plzeňský kraj",
-                "Karlovarský kraj",
-                "Ústecký kraj",
-                "Liberecký kraj",
-                "Královéhradecký kraj",
-                "Pardubický kraj",
-                "Kraj Vysočina",
-                "Jihomoravský kraj",
-                "Olomoucký kraj",
-                "Zlínský kraj",
-                "Moravskoslezský kraj"
-              ],
-              additionalProperties: false
-            }
+  model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
+  instructions: SYSTEM,
+  input: prompt,
+  text: {
+    format: {
+      type: "json_schema",
+      name: "political_action",
+      strict: true,
+      schema: {
+        type: "object",
+        properties: {
+          effects: {
+            type: "object",
+            properties: {
+              days: { type: "number" },
+              support: { type: "number" },
+              members: { type: "number" },
+              budget: { type: "number" },
+              influence: { type: "number" },
+              regional: {
+                type: "object",
+                properties: {
+                  "Praha": { type: "number" },
+                  "Středočeský kraj": { type: "number" },
+                  "Jihočeský kraj": { type: "number" },
+                  "Plzeňský kraj": { type: "number" },
+                  "Karlovarský kraj": { type: "number" },
+                  "Ústecký kraj": { type: "number" },
+                  "Liberecký kraj": { type: "number" },
+                  "Královéhradecký kraj": { type: "number" },
+                  "Pardubický kraj": { type: "number" },
+                  "Kraj Vysočina": { type: "number" },
+                  "Jihomoravský kraj": { type: "number" },
+                  "Olomoucký kraj": { type: "number" },
+                  "Zlínský kraj": { type: "number" },
+                  "Moravskoslezský kraj": { type: "number" }
+                },
+                required: [
+                  "Praha",
+                  "Středočeský kraj",
+                  "Jihočeský kraj",
+                  "Plzeňský kraj",
+                  "Karlovarský kraj",
+                  "Ústecký kraj",
+                  "Liberecký kraj",
+                  "Královéhradecký kraj",
+                  "Pardubický kraj",
+                  "Kraj Vysočina",
+                  "Jihomoravský kraj",
+                  "Olomoucký kraj",
+                  "Zlínský kraj",
+                  "Moravskoslezský kraj"
+                ],
+                additionalProperties: false
+              }
+            },
+            required: [
+              "days",
+              "support",
+              "members",
+              "budget",
+              "influence",
+              "regional"
+            ],
+            additionalProperties: false
           },
-          required: [
-            "days",
-            "support",
-            "members",
-            "budget",
-            "influence",
-            "regional"
-          ],
-          additionalProperties: false
-        },
-        event: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            text: { type: "string" }
+          event: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              text: { type: "string" }
+            },
+            required: ["title", "text"],
+            additionalProperties: false
           },
-          required: ["title", "text"],
-          additionalProperties: false
+          ai_response: {
+            type: "string"
+          }
         },
-        ai_response: {
-          type: "string"
-        }
-      },
-      required: ["effects", "event", "ai_response"],
-      additionalProperties: false
+        required: ["effects", "event", "ai_response"],
+        additionalProperties: false
+      }
     }
-  }
-},
-  
-         
-},
-      max_output_tokens: 900
-    });
+  },
+  max_output_tokens: 900
+});
 
     const raw = response.output_text;
     const result = JSON.parse(raw);

@@ -145,25 +145,7 @@ app.post("/api/action", async (req,res) => {
   }
 },
   
-          },
-          required: ["days", "support", "members", "budget", "influence", "regional"],
-          additionalProperties: false
-        },
-        event: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            text: { type: "string" }
-          },
-          required: ["title", "text"],
-          additionalProperties: false
-        },
-        ai_response: { type: "string" }
-      },
-      required: ["effects", "event", "ai_response"],
-      additionalProperties: false
-    }
-  }
+         
 },
       max_output_tokens: 900
     });
